@@ -6,18 +6,24 @@ var p = require('path')
 var writer = require('flush-write-stream')
 var saxophonist = require('../')
 
+function setup (file, element, write) {
+  var input = fs.createReadStream(p.join(__dirname, file))
+  input.pipe(saxophonist(element)).pipe(writer.obj(write))
+}
+
 test('parse simple xml file', function (t) {
   t.plan(4)
 
-  var input = fs.createReadStream(p.join(__dirname, 'simple.xml'))
+  setup('simple.xml', 'b', write)
+
   var expected = ['1', '2', '3', null]
-  input.pipe(saxophonist('b')).pipe(writer.obj(write))
 
   function write (elem, enc, cb) {
     t.deepEqual(elem, {
       path: ['a', 'b'],
       attributes: {},
-      text: expected.shift()
+      text: expected.shift(),
+      children: null
     })
 
     cb()
@@ -27,26 +33,26 @@ test('parse simple xml file', function (t) {
 test('parse xml file with cdata', function (t) {
   t.plan(2)
 
-  var input = fs.createReadStream(p.join(__dirname, 'cdata.xml'))
+  setup('cdata.xml', 'sender', write)
+
   var expected = ['<sender>John Smith</sender>', 'DDD<aaa>CCC</bbb>']
-  input.pipe(saxophonist('sender')).pipe(writer.obj(write))
 
   function write (elem, enc, cb) {
     t.deepEqual(elem, {
       path: ['abc', 'sender'],
       attributes: {},
-      text: expected.shift()
+      text: expected.shift(),
+      children: null
     })
 
     cb()
   }
 })
 
-test('parse simple xml file', function (t) {
+test('parse xml attributes', function (t) {
   t.plan(1)
 
-  var input = fs.createReadStream(p.join(__dirname, 'attributes.xml'))
-  input.pipe(saxophonist('hello')).pipe(writer.obj(write))
+  setup('attributes.xml', 'hello', write)
 
   function write (elem, enc, cb) {
     t.deepEqual(elem, {
@@ -55,9 +61,43 @@ test('parse simple xml file', function (t) {
         a: '1',
         b: '2'
       },
-      text: null
+      text: null,
+      children: null
     })
 
+    cb()
+  }
+})
+
+test('parse deep elements', function (t) {
+  t.plan(2)
+
+  setup('deep.xml', 'b', write)
+
+  var expected = [{
+    path: ['a', 'b'],
+    attributes: {},
+    children: [{
+      path: ['a', 'b', 'c'],
+      attributes: {},
+      text: '1',
+      children: null
+    }],
+    text: null
+  }, {
+    path: ['a', 'b'],
+    attributes: {},
+    children: [{
+      path: ['a', 'b', 'b'],
+      attributes: {},
+      text: '2',
+      children: null
+    }],
+    text: null
+  }]
+
+  function write (elem, enc, cb) {
+    t.deepEqual(elem, expected.shift())
     cb()
   }
 })

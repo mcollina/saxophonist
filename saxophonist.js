@@ -8,6 +8,7 @@ function Element (path, attributes) {
   this.path = new Array(path.length)
   this.text = null
   this.attributes = attributes
+  this.children = null
 
   // fast array clone
   for (var i = 0; i < path.length; i++) {
@@ -25,31 +26,44 @@ function createParser (instance, tag) {
   })
 
   var currentPath = []
-  var element = null
+  var elements = []
 
   parser.onopentag = function (node) {
     currentPath.push(node.name)
 
-    if (node.name === tag) {
+    var parent = elements[elements.length - 1]
+    var element
+
+    if (node.name === tag || parent) {
       element = new Element(currentPath, node.attributes)
+      if (parent) {
+        if (parent.children === null) {
+          parent.children = [element]
+        } else {
+          parent.children.push(element)
+        }
+      }
+      elements.push(element)
     }
   }
 
   parser.onclosetag = function (tag) {
     currentPath.pop()
-    if (element) {
+    var element = elements.pop()
+    if (elements.length === 0 && element) {
       instance.push(element)
-      element = null
     }
   }
 
   parser.ontext = function (value) {
+    var element = elements[elements.length - 1]
     if (element) {
       element.text = value
     }
   }
 
   parser.oncdata = function (value) {
+    var element = elements[elements.length - 1]
     if (element) {
       if (element.text) {
         element.text += value
