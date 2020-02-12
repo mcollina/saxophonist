@@ -1,6 +1,6 @@
 {
   "name": "saxophonist",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Extract elements from large XML files with node.js streams",
   "main": "saxophonist.js",
   "scripts": {
